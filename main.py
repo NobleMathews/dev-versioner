@@ -47,11 +47,11 @@ def make_vcs_request(dependency):
     if "github.com" in dependency:
         # Github
         g = Github(Constants.GITHUB_TOKEN)
-        repo_identifier = re.search("github.com/([^/]+)/([^/.\r\n]+)", dependency)
+        repo_identifier = re.search(r"github.com/([^/]+)/([^/.\r\n]+)", dependency)
         repo = g.get_repo(f'{repo_identifier.group(1)}/{repo_identifier.group(2)}')
         repo_license = repo.get_license()
         if repo_license.license.name == "Other":
-            repo_lic = parse_license(str(repo_license.decoded_content), Constants.LICENSE_DICT)
+            repo_lic = parse_license(repo_license.decoded_content.decode(), Constants.LICENSE_DICT)
         else:
             repo_lic = repo_license.license.name
         releases = [release.tag_name for release in repo.get_releases()]
@@ -59,8 +59,9 @@ def make_vcs_request(dependency):
         if len(releases) == 0:
             releases = [tag.name for tag in repo.get_tags()]
         print(releases)
-        dep_file = str(repo.get_contents("go.mod").decoded_content)
-        dep_data = re.findall("require\\s+([^ ]+)\\s+([^ \n]+)", dep_file)
+        dep_file = repo.get_contents("go.mod").decoded_content.decode()
+        # require .. .. or require ( .. .. \n .. ..)
+        dep_data = re.findall(r"[\s/]+([^\s\n(]+)\s+v([^\s\n]+)", dep_file)
         data = dict(dep_data)
         result['name'] = dependency
         result['version'] = releases[0]
@@ -142,7 +143,7 @@ def make_single_request(language, package):
             ver_parse = source[language]['versions'].split('.')
             dep_parse = source[language]['dependencies'].split('.')
             key_element = soup.find(key_parse[0], class_=key_parse[1]).getText()
-            key_data = re.findall("([^ \n:]+): ([a-zA-Z0-9-_ ,.]+)", key_element)
+            key_data = re.findall(r"([^ \n:]+): ([a-zA-Z0-9-_ ,.]+)", key_element)
             # print({span.get_text().strip() for span in soup.find('div', class_="go-Main-headerDetails").findChildren("span", recursive=False)})
             data = dict(key_data)
             ver_res = requests.get(url+"?tab=versions", allow_redirects=False)
@@ -184,12 +185,17 @@ def main():
     The main function
     """
     dependency_list = {
+        'javascript':
+            [
+                'react',
+            ],
         "go":
             [
-                "github.com/deepsourcelabs/cli",
+                "https://github.com/deepsourcelabs/cli",
                 "https://github.com/go-yaml/yaml",
                 "github.com/getsentry/sentry-go",
                 "github.com/cactus/go-statsd-client/v5/statsd",
+                "github.com/guseggert/pkggodev-client",
             ]
     }
     # print(make_single_request('javascript', 'react'))
