@@ -9,7 +9,8 @@ these may not support semantic versioning (https://semver.org/)
 
     - Rate limits and authentication [handled]
     ! user/repo but still commit hash - branch - version
-        gopkg.in/yaml.v1 - https://github.com/go-yaml/yaml/tree/v1
+        There may exist copies in other repositories
+            gopkg.in/yaml.v1 - https://github.com/go-yaml/yaml/tree/v1
     - how does license api work when github cannot identify type of file [handled]
 
 """
@@ -37,32 +38,45 @@ def parse_license(license_file, license_dict):
 
 
 def make_vcs_request(dependency):
+    """
+    Fall through to VCS check for a go namespace (only due to go.mod check)
+    :param dependency: package not found in other repositories
+    :return: result object with name version license and dependencies
+    """
     result = {}
-    # Github
-    g = Github(Constants.GITHUB_TOKEN)
-    # If all failed and fell through to VCS check for go namespace
-    repo_identifier = re.search("github.com/([^/]+)/([^/.\r\n]+)", dependency)
-    repo = g.get_repo(f'{repo_identifier.group(1)}/{repo_identifier.group(2)}')
-    repo_license = repo.get_license()
-    repo_releases = repo.get_releases()
-    if repo_license.license.name == "Other":
-        print(parse_license(str(repo_license.decoded_content), Constants.LICENSE_DICT))
-    else:
-        print(repo_license.license.name)
-    for release in repo_releases:
-        print(release.tag_name)
-
+    if "github.com" in dependency:
+        # Github
+        g = Github(Constants.GITHUB_TOKEN)
+        repo_identifier = re.search("github.com/([^/]+)/([^/.\r\n]+)", dependency)
+        repo = g.get_repo(f'{repo_identifier.group(1)}/{repo_identifier.group(2)}')
+        repo_license = repo.get_license()
+        if repo_license.license.name == "Other":
+            repo_lic = parse_license(str(repo_license.decoded_content), Constants.LICENSE_DICT)
+        else:
+            repo_lic = repo_license.license.name
+        releases = [release.tag_name for release in repo.get_releases()]
+        # ! this may have unintended consequences like missing release info
+        if len(releases) == 0:
+            releases = [tag.name for tag in repo.get_tags()]
+        print(releases)
+        dep_file = str(repo.get_contents("go.mod").decoded_content)
+        dep_data = re.findall("require\\s+([^ ]+)\\s+([^ \n]+)", dep_file)
+        data = dict(dep_data)
+        result['name'] = dependency
+        result['version'] = releases[0]
+        result['license'] = repo_lic
+        result['dependencies'] = data
     # TODO [Gitlab, Bitbucket]
-    # result['name'] = data[name]
-    # result['version'] = data[version]
-    # result['license'] = data[licence]
-    # result['dependencies'] = data[dependencies]
     return result
 
 
 def make_url(language, package, version=""):
     """
-    Construct the API JSON request URL.
+    Construct the API JSON request URL or web URL to scrape
+    :param language: python, javascript or go
+    :param package: as imported
+    :param version: optional
+    :return: str(url) to fetch
     """
     if language == "python":
         if version:
@@ -76,12 +90,15 @@ def make_url(language, package, version=""):
             url_elements = (source[language]['url'], package)
     else:  # GO
         url_elements = (source[language]['url'], package)
-    return str("/".join(url_elements).rstrip("/"))
+    return "/".join(url_elements).rstrip("/")
 
 
 def make_single_request(language, package):
     """
     Obtain package license and dependency information.
+    :param language: python, javascript or go
+    :param package: as imported
+    :return: result object with name version license and dependencies
     """
     result = {}
     url = make_url(language, package)
@@ -142,9 +159,6 @@ def make_single_request(language, package):
             result['version'] = data[version]
             result['license'] = data[licence]
             result['dependencies'] = dependencies
-
-            # ?tab=imports
-
         else:
             result = make_vcs_request(package)
 
@@ -154,6 +168,9 @@ def make_single_request(language, package):
 def make_multiple_requests(language, packages):
     """
     Obtain license and dependency information for list of packages.
+    :param language: python, javascript or go
+    :param packages: a list of dependencies in each language
+    :return: result object with name version license and dependencies
     """
     result = {}
 
