@@ -115,14 +115,36 @@ def make_single_request(language, package):
         # if "Oops! We couldn't find" not in response.text:
         if response.status_code != 400:
             soup = BeautifulSoup(response.text, "html.parser")
-            soup_r = soup.find('div', class_="go-Main-headerDetails").getText()
-            data_s = re.findall("([^ \n:]+): ([a-zA-Z0-9-_ ,.]+)", soup_r)
+            name_parse = name.split('.')
+            name_data = soup.find(name_parse[0], class_=name_parse[1]).getText().strip().split(" ")
+            if len(name_data) > 1:
+                package_name = name_data[-1].strip()
+            else:
+                package_name = package
+            key_parse = source[language]['parse'].split('.')
+            ver_parse = source[language]['versions'].split('.')
+            dep_parse = source[language]['dependencies'].split('.')
+            key_element = soup.find(key_parse[0], class_=key_parse[1]).getText()
+            key_data = re.findall("([^ \n:]+): ([a-zA-Z0-9-_ ,.]+)", key_element)
             # print({span.get_text().strip() for span in soup.find('div', class_="go-Main-headerDetails").findChildren("span", recursive=False)})
-            data = dict(data_s)
-            result['name'] = package
+            data = dict(key_data)
+            ver_res = requests.get(url+"?tab=versions", allow_redirects=False)
+            dep_res = requests.get(url+"?tab=imports", allow_redirects=False)
+            if ver_res.status_code == 200:
+                version_soup = BeautifulSoup(ver_res.text, "html.parser")
+                print([release.getText().strip() for release in version_soup.findAll(ver_parse[0], class_=ver_parse[1])])
+            dependencies = []
+            if dep_res.status_code == 200:
+                dep_soup = BeautifulSoup(dep_res.text, "html.parser")
+                for dependency in dep_soup.findAll(dep_parse[0], class_=dep_parse[1]):
+                    dependencies.append(dependency.getText().strip())
+            result['name'] = package_name
             result['version'] = data[version]
             result['license'] = data[licence]
-            # result['dependencies'] = data[dependencies]
+            result['dependencies'] = dependencies
+
+            # ?tab=imports
+
         else:
             result = make_vcs_request(package)
 
@@ -148,12 +170,14 @@ def main():
         "go":
             [
                 "github.com/deepsourcelabs/cli",
-                "https://github.com/go-yaml/yaml"
+                "https://github.com/go-yaml/yaml",
+                "github.com/getsentry/sentry-go",
+                "github.com/cactus/go-statsd-client/v5/statsd",
             ]
     }
     # print(make_single_request('javascript', 'react'))
     for lang in dependency_list:
-        make_multiple_requests(lang, dependency_list[lang])
+        print(json.dumps(make_multiple_requests(lang, dependency_list[lang]), indent=3))
 
 
 if __name__ == "__main__":
