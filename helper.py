@@ -16,6 +16,7 @@ def parse_license(license_file: str, license_dict: dict) -> str:
 
 class Result(TypedDict):
     """Type hinting for results"""
+
     name: str
     version: str
     license: str

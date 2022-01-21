@@ -18,6 +18,7 @@ def connect_elasticsearch(target: dict) -> Elasticsearch:
         create_index(_es, "go")
     else:
         logging.error('Failed to connect!')
+        exit(-1)
     return _es
 
 

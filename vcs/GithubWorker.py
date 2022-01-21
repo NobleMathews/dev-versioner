@@ -1,3 +1,4 @@
+import time
 from typing import Dict, List, Any
 from github import Github
 from helper import parse_license
@@ -5,11 +6,16 @@ import logging
 import re
 import Constants
 
+g = Github(Constants.GITHUB_TOKEN)
+
 
 def handle_github(dependency: str) -> dict[str, str | list[Any]]:
-    """GitHub VCS fallthrough for GO"""
+    """VCS fallthrough for GitHub based GO"""
     result = {}
-    g = Github(Constants.GITHUB_TOKEN)
+    rl = g.get_rate_limit()
+    if rl.core.remaining == 0:
+        logging.error("GitHub API limit exhuasted - Sleeping")
+        time.sleep(rl.core.reset-datetime.datetime.now())
     repo_identifier = re.search(r"github.com/([^/]+)/([^/.\r\n]+)", dependency)
     repo = g.get_repo(repo_identifier.group(1) + "/" + repo_identifier.group(2))
     repo_license = repo.get_license()

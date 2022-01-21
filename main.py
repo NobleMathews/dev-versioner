@@ -236,5 +236,5 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.getLogger().setLevel(logging.WARNING)
+    logging.getLogger().setLevel(logging.INFO)
     main()
