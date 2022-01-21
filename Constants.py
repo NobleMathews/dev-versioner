@@ -1,6 +1,7 @@
 """Constants and config to be used by analyzer"""
 import Secrets
-
+GITHUB_TOKEN = Secrets.GITHUB_TOKEN
+CACHE_EXPIRY = 1800
 REGISTRY = {
     'python':
         {
@@ -32,7 +33,6 @@ REGISTRY = {
             'dependency': 'dependencies',
         }
 }
-GITHUB_TOKEN = Secrets.GITHUB_TOKEN
 LICENSE_DICT = {
     'AFL': 'Academic Free License',
     'Apache': 'Apache Software License',
@@ -47,8 +47,10 @@ LICENSE_DICT = {
     'BSD Zero Clause License': 'BSD Zero Clause license',
     'CeCILL': 'CeCILL Free Software License',
     'CDDL': 'Common Development and Distribution License',
-    'Creative Commons Attribution 4.0': 'Creative Commons Attribution 4.0 International Public License',
-    'Creative Commons Attribution-ShareAlike 4.0': 'Creative Commons Attribution-ShareAlike 4.0 International Public LIcense',
+    'Creative Commons Attribution 4.0':
+        'Creative Commons Attribution 4.0 International Public License',
+    'Creative Commons Attribution-ShareAlike 4.0':
+        'Creative Commons Attribution-ShareAlike 4.0 International Public License',
     'CC0': 'Creative Commons Legal Code',
     'Clear BSD': 'Clear BSD License',
     'DO WHAT THE': 'Do What The F*ck You Want To Public License',

@@ -21,10 +21,40 @@ import re
 import json
 import requests
 import requests_cache
+from elasticsearch import Elasticsearch
+from datetime import datetime
 
-requests_cache.install_cache('test_cache', expire_after=1800)
+requests_cache.install_cache('test_cache', expire_after=Constants.CACHE_EXPIRY)
 
 source = Constants.REGISTRY
+
+
+def connect_elasticsearch():
+    """Connect to local elastic server"""
+    _es = None
+    _es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+    if _es.ping():
+        print('Connected to Elastic')
+        create_index(_es, "python")
+        create_index(_es, "javascript")
+        create_index(_es, "go")
+    else:
+        print('Failed to connect!')
+    return _es
+
+
+def create_index(es, index_name="versioner"):
+    """Populating Elastic with strict schema to index"""
+    config = {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 1
+        }
+    }
+    try:
+        es.indices.create(index=index_name, ignore=400, **config)
+    except Exception as e:
+        print(str(e))
 
 
 def parse_license(license_file, license_dict):
@@ -51,10 +81,13 @@ def make_vcs_request(dependency):
         # Github
         g = Github(Constants.GITHUB_TOKEN)
         repo_identifier = re.search(r"github.com/([^/]+)/([^/.\r\n]+)", dependency)
-        repo = g.get_repo(repo_identifier.group(1)+"/"+repo_identifier.group(2))
+        repo = g.get_repo(repo_identifier.group(1) + "/" + repo_identifier.group(2))
         repo_license = repo.get_license()
         if repo_license.license.name == "Other":
-            repo_lic = parse_license(repo_license.decoded_content.decode(), Constants.LICENSE_DICT)
+            repo_lic = parse_license(
+                repo_license.decoded_content.decode(),
+                Constants.LICENSE_DICT
+            )
         else:
             repo_lic = repo_license.license.name
         releases = [release.tag_name for release in repo.get_releases()]
@@ -69,7 +102,7 @@ def make_vcs_request(dependency):
         result['name'] = dependency
         result['version'] = releases[0]
         result['license'] = repo_lic
-        result['dependencies'] = data
+        result['dependencies'] = list(data.items())
     # TODO [Gitlab, Bitbucket]
     return result
 
@@ -97,13 +130,22 @@ def make_url(language, package, version=""):
     return "/".join(url_elements).rstrip("/")
 
 
-def make_single_request(language, package):
+def make_single_request(es, language, package):
     """
     Obtain package license and dependency information.
+    :param es: ElasticSearch Instance
     :param language: python, javascript or go
     :param package: as imported
     :return: result object with name version license and dependencies
     """
+    ESresult = es.get(index=language, id=package, ignore=404)
+
+    if ESresult["found"]:
+        db_time = datetime.fromisoformat(
+            ESresult["_source"]["timestamp"],
+        )
+        if db_time - datetime.utcnow() > Constants.CACHE_EXPIRY:
+            return ESresult["_source"]
     result = {}
     url = make_url(language, package)
     print(url)
@@ -182,13 +224,19 @@ def make_single_request(language, package):
             result['dependencies'] = dependencies
         else:
             result = make_vcs_request(package)
-
+        result["timestamp"] = datetime.utcnow().isoformat()
+        es.index(
+            index=language,
+            id=package,
+            document=result
+        )
     return result
 
 
-def make_multiple_requests(language, packages):
+def make_multiple_requests(es, language, packages):
     """
     Obtain license and dependency information for list of packages.
+    :param es: ElasticSearch Instance
     :param language: python, javascript or go
     :param packages: a list of dependencies in each language
     :return: result object with name version license and dependencies
@@ -196,12 +244,13 @@ def make_multiple_requests(language, packages):
     result = {}
 
     for package in packages:
-        result[package] = make_single_request(language, package)
+        result[package] = make_single_request(es, language, package)
     return result
 
 
 def main():
     """Main function for testing"""
+    es = connect_elasticsearch()
     dependency_list = {
         'javascript':
             [
@@ -222,7 +271,7 @@ def main():
     }
     # print(make_single_request('javascript', 'react'))
     for lang, dependencies in dependency_list.items():
-        print(json.dumps(make_multiple_requests(lang, dependencies), indent=3))
+        print(json.dumps(make_multiple_requests(es, lang, dependencies), indent=3))
 
 
 if __name__ == "__main__":
