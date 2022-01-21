@@ -20,6 +20,8 @@ from bs4 import BeautifulSoup
 import re
 import json
 import requests
+import requests_cache
+requests_cache.install_cache('test_cache', expire_after=1800)
 
 source = Constants.REGISTRY
 
@@ -150,7 +152,8 @@ def make_single_request(language, package):
             dep_res = requests.get(url+"?tab=imports", allow_redirects=False)
             if ver_res.status_code == 200:
                 version_soup = BeautifulSoup(ver_res.text, "html.parser")
-                print([release.getText().strip() for release in version_soup.findAll(ver_parse[0], class_=ver_parse[1])])
+                releases = [release.getText().strip() for release in version_soup.findAll(ver_parse[0], class_=ver_parse[1])]
+                print(releases)
             dependencies = []
             if dep_res.status_code == 200:
                 dep_soup = BeautifulSoup(dep_res.text, "html.parser")
@@ -188,6 +191,10 @@ def main():
         'javascript':
             [
                 'react',
+            ],
+        "python":
+            [
+                'pygithub'
             ],
         "go":
             [
