@@ -51,7 +51,7 @@ def make_vcs_request(dependency):
         # Github
         g = Github(Constants.GITHUB_TOKEN)
         repo_identifier = re.search(r"github.com/([^/]+)/([^/.\r\n]+)", dependency)
-        repo = g.get_repo(f'{repo_identifier.group(1)}/{repo_identifier.group(2)}')
+        repo = g.get_repo(repo_identifier.group(1)+"/"+repo_identifier.group(2))
         repo_license = repo.get_license()
         if repo_license.license.name == "Other":
             repo_lic = parse_license(repo_license.decoded_content.decode(), Constants.LICENSE_DICT)
@@ -147,7 +147,6 @@ def make_single_request(language, package):
             dep_parse = source[language]['dependencies'].split('.')
             key_element = soup.find(key_parse[0], class_=key_parse[1]).getText()
             key_data = re.findall(r"([^ \n:]+): ([a-zA-Z0-9-_ ,.]+)", key_element)
-            # print({span.get_text().strip() for span in soup.find('div', class_="go-Main-headerDetails").findChildren("span", recursive=False)})
             data = dict(key_data)
             ver_res = requests.get(url + "?tab=versions", allow_redirects=False)
             dep_res = requests.get(url + "?tab=imports", allow_redirects=False)
@@ -186,6 +185,7 @@ def make_multiple_requests(language, packages):
 
 
 def main():
+    """ Main function for testing"""
     dependency_list = {
         'javascript':
             [
