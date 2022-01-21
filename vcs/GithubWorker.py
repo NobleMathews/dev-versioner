@@ -7,6 +7,7 @@ import Constants
 
 
 def handle_github(dependency: str) -> dict[str, str | list[Any]]:
+    """GitHub VCS fallthrough for GO"""
     result = {}
     g = Github(Constants.GITHUB_TOKEN)
     repo_identifier = re.search(r"github.com/([^/]+)/([^/.\r\n]+)", dependency)

@@ -1,17 +1,23 @@
+import logging
+
 from elasticsearch import Elasticsearch
+import Secrets
 
 
 def connect_elasticsearch(target: dict) -> Elasticsearch:
     """Connect to local elastic server"""
     _es = None
-    _es = Elasticsearch([target])
+    _es = Elasticsearch(
+        [target],
+        http_auth=("elastic", Secrets.PASSWORD)
+    )
     if _es.ping():
-        print('Connected to Elastic')
+        logging.info('Connected to Elastic')
         create_index(_es, "python")
         create_index(_es, "javascript")
         create_index(_es, "go")
     else:
-        print('Failed to connect!')
+        logging.error('Failed to connect!')
     return _es
 
 
