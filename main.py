@@ -21,6 +21,7 @@ import re
 import json
 import requests
 import requests_cache
+
 requests_cache.install_cache('test_cache', expire_after=1800)
 
 source = Constants.REGISTRY
@@ -148,11 +149,12 @@ def make_single_request(language, package):
             key_data = re.findall(r"([^ \n:]+): ([a-zA-Z0-9-_ ,.]+)", key_element)
             # print({span.get_text().strip() for span in soup.find('div', class_="go-Main-headerDetails").findChildren("span", recursive=False)})
             data = dict(key_data)
-            ver_res = requests.get(url+"?tab=versions", allow_redirects=False)
-            dep_res = requests.get(url+"?tab=imports", allow_redirects=False)
+            ver_res = requests.get(url + "?tab=versions", allow_redirects=False)
+            dep_res = requests.get(url + "?tab=imports", allow_redirects=False)
             if ver_res.status_code == 200:
                 version_soup = BeautifulSoup(ver_res.text, "html.parser")
-                releases = [release.getText().strip() for release in version_soup.findAll(ver_parse[0], class_=ver_parse[1])]
+                releases = [release.getText().strip() for release in
+                            version_soup.findAll(ver_parse[0], class_=ver_parse[1])]
                 print(releases)
             dependencies = []
             if dep_res.status_code == 200:
@@ -184,9 +186,6 @@ def make_multiple_requests(language, packages):
 
 
 def main():
-    """
-    The main function
-    """
     dependency_list = {
         'javascript':
             [
@@ -206,8 +205,8 @@ def main():
             ]
     }
     # print(make_single_request('javascript', 'react'))
-    for lang in dependency_list:
-        print(json.dumps(make_multiple_requests(lang, dependency_list[lang]), indent=3))
+    for lang, dependencies in dependency_list.items():
+        print(json.dumps(make_multiple_requests(lang, dependencies), indent=3))
 
 
 if __name__ == "__main__":
