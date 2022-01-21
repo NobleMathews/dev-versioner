@@ -1,4 +1,4 @@
-""" Constants and config to be used by analyzer """
+"""Constants and config to be used by analyzer"""
 import Secrets
 
 REGISTRY = {

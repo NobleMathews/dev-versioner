@@ -29,9 +29,9 @@ source = Constants.REGISTRY
 
 def parse_license(license_file, license_dict):
     """
-    Checks the license file contents against a dictionary to return possible license type
+    Checks the license file contents to return possible license type
     :param license_file: String containing license file contents
-    :param license_dict: Dictionary containing a mapping between license files and unique substring
+    :param license_dict: Dictionary mapping license files and unique substring
     :return: Detected license type as a String, Other if failed to detect
     """
     for lic in license_dict:
@@ -137,7 +137,10 @@ def make_single_request(language, package):
         if response.status_code != 400:
             soup = BeautifulSoup(response.text, "html.parser")
             name_parse = name.split('.')
-            name_data = soup.find(name_parse[0], class_=name_parse[1]).getText().strip().split(" ")
+            name_data = soup.find(
+                name_parse[0],
+                class_=name_parse[1]
+            ).getText().strip().split(" ")
             if len(name_data) > 1:
                 package_name = name_data[-1].strip()
             else:
@@ -145,21 +148,34 @@ def make_single_request(language, package):
             key_parse = source[language]['parse'].split('.')
             ver_parse = source[language]['versions'].split('.')
             dep_parse = source[language]['dependencies'].split('.')
-            key_element = soup.find(key_parse[0], class_=key_parse[1]).getText()
+            key_element = soup.find(
+                key_parse[0],
+                class_=key_parse[1]
+            ).getText()
             key_data = re.findall(r"([^ \n:]+): ([a-zA-Z0-9-_ ,.]+)", key_element)
             data = dict(key_data)
             ver_res = requests.get(url + "?tab=versions", allow_redirects=False)
             dep_res = requests.get(url + "?tab=imports", allow_redirects=False)
             if ver_res.status_code == 200:
                 version_soup = BeautifulSoup(ver_res.text, "html.parser")
-                releases = [release.getText().strip() for release in
-                            version_soup.findAll(ver_parse[0], class_=ver_parse[1])]
+                releases = [
+                    release.getText().strip()
+                    for release in version_soup.findAll(
+                        ver_parse[0],
+                        class_=ver_parse[1]
+                    )
+                ]
                 print(releases)
             dependencies = []
             if dep_res.status_code == 200:
                 dep_soup = BeautifulSoup(dep_res.text, "html.parser")
-                for dependency in dep_soup.findAll(dep_parse[0], class_=dep_parse[1]):
-                    dependencies.append(dependency.getText().strip())
+                dependencies = [
+                    dependency.getText().strip()
+                    for dependency in dep_soup.findAll(
+                        dep_parse[0],
+                        class_=dep_parse[1]
+                    )
+                ]
             result['name'] = package_name
             result['version'] = data[version]
             result['license'] = data[licence]
@@ -185,7 +201,7 @@ def make_multiple_requests(language, packages):
 
 
 def main():
-    """ Main function for testing"""
+    """Main function for testing"""
     dependency_list = {
         'javascript':
             [
