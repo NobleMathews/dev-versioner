@@ -22,7 +22,7 @@ import json
 import requests
 import requests_cache
 from elasticsearch import Elasticsearch
-from datetime import datetime
+from datetime import datetime, timedelta
 
 requests_cache.install_cache('test_cache', expire_after=Constants.CACHE_EXPIRY)
 
@@ -51,10 +51,7 @@ def create_index(es, index_name="versioner"):
             "number_of_replicas": 1
         }
     }
-    try:
-        es.indices.create(index=index_name, ignore=400, **config)
-    except Exception as e:
-        print(str(e))
+    es.indices.create(index=index_name, ignore=400, **config)
 
 
 def parse_license(license_file, license_dict):
@@ -139,12 +136,14 @@ def make_single_request(es, language, package):
     :return: result object with name version license and dependencies
     """
     ESresult = es.get(index=language, id=package, ignore=404)
-
     if ESresult["found"]:
         db_time = datetime.fromisoformat(
             ESresult["_source"]["timestamp"],
         )
-        if db_time - datetime.utcnow() > Constants.CACHE_EXPIRY:
+        if db_time - datetime.utcnow() < timedelta(
+                seconds=Constants.CACHE_EXPIRY
+        ):
+            print("Using "+package+" found in ES Database")
             return ESresult["_source"]
     result = {}
     url = make_url(language, package)
@@ -157,7 +156,8 @@ def make_single_request(es, language, package):
 
     if language == "python":
         data = json.loads(response.text)
-        result['name'] = data["info"][name]
+        result['name'] = package
+        # data["info"][name]
         result['version'] = data["info"][version]
         result['license'] = data["info"][licence]
         result['dependencies'] = data["info"][dependencies]
@@ -165,12 +165,13 @@ def make_single_request(es, language, package):
         data = json.loads(response.text)
         if 'versions' in data.keys():
             latest = data['dist-tags']['latest']
-            result['name'] = data['versions'][latest][name]
+            result['name'] = package
+            # data['versions'][latest][name]
             result['version'] = latest
             result['license'] = data['versions'][latest]['license']
             result['dependencies'] = data['versions'][latest]['dependencies']
         else:
-            result['name'] = data[name]
+            result['name'] = package
             result['version'] = data[version]
             result['license'] = data[licence]
             result['dependencies'] = data[dependencies]
@@ -224,12 +225,12 @@ def make_single_request(es, language, package):
             result['dependencies'] = dependencies
         else:
             result = make_vcs_request(package)
-        result["timestamp"] = datetime.utcnow().isoformat()
-        es.index(
-            index=language,
-            id=package,
-            document=result
-        )
+    result["timestamp"] = datetime.utcnow().isoformat()
+    es.index(
+        index=language,
+        id=package,
+        document=result
+    )
     return result
 
 
