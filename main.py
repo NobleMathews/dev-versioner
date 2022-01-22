@@ -11,6 +11,7 @@ these may not support semantic versioning (https://semver.org/)
             gopkg.in/yaml.v1 - https://github.com/go-yaml/yaml/tree/v1
 
 """
+import sys
 import Constants
 from bs4 import BeautifulSoup
 import re
@@ -210,6 +211,8 @@ def make_multiple_requests(
 def main():
     """Main function for testing"""
     es = connect_elasticsearch({'host': 'localhost', 'port': 9200})
+    if es is None:
+        sys.exit(-1)
     dependency_list = {
         'javascript':
             [
