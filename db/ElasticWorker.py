@@ -21,7 +21,7 @@ def connect_elasticsearch(target: dict) -> Elasticsearch:
     return _es
 
 
-def create_index(es: Elasticsearch, index_name: str = "versioner") -> None:
+def create_index(es: Elasticsearch, index_name: str = "versioner") -> bool:
     """Populating Elastic with strict schema to index"""
     config = {
         "settings": {
@@ -30,3 +30,9 @@ def create_index(es: Elasticsearch, index_name: str = "versioner") -> None:
         }
     }
     es.indices.create(index=index_name, ignore=400, **config)
+    return True
+
+
+def clear_index(es: Elasticsearch, index_name: str = "versioner") -> bool:
+    es.indices.delete(index=index_name, ignore=400)
+    return True

@@ -1,7 +1,27 @@
 """Constants and config to be used by analyzer"""
 import Secrets
+
 GITHUB_TOKEN = Secrets.GITHUB_TOKEN
 CACHE_EXPIRY = 1800
+DEPENDENCY_TEST = {
+    'javascript':
+        [
+            'react@0.12.0',
+            'react@17.0.2',
+            'jQuery@1.7.4',
+            'jQuery'
+        ],
+    "python":
+        [
+            'pygithub'
+        ],
+    "go":
+        [
+            "https://github.com/go-yaml/yaml",
+            "github.com/getsentry/sentry-go",
+            "github.com/cactus/go-statsd-client/v5/statsd",
+        ]
+}
 REGISTRY = {
     'python':
         {

@@ -70,7 +70,10 @@ def make_url(
             else:
                 url_elements = (source[language]['url'], package)
         case "go":
-            url_elements = (source[language]['url'], package)
+            if version:
+                url_elements = (source[language]['url'], package + "@" + version)
+            else:
+                url_elements = (source[language]['url'], package)
         case _:
             logging.error("This language is not supported")
             return ""
@@ -91,8 +94,11 @@ def make_single_request(
     :param version: check for specific version
     :return: result object with name version license and dependencies
     """
-    ESresult: dict = es.get(index=language, id=package, ignore=404)
-    if ESresult["found"]:
+    if version:
+        ESresult: dict = es.get(index=language, id=package + "@" + version, ignore=404)
+    else:
+        ESresult: dict = es.get(index=language, id=package, ignore=404)
+    if "found" in ESresult and ESresult["found"]:
         db_time = datetime.fromisoformat(
             ESresult["_source"]["timestamp"],
         )
@@ -106,31 +112,44 @@ def make_single_request(
     logging.info(url)
     response = requests.get(url)
     name = source[language]['name']
-    version = source[language]['version']
-    licence = source[language]['license']
+    version_tag = source[language]['version']
+    license_tag = source[language]['license']
     dependencies = source[language]['dependency']
     match language:
         case "python":
             data = json.loads(response.text)
             result['name'] = package
             # data["info"][name]
-            result['version'] = data["info"][version]
-            result['license'] = data["info"][licence]
+            result['version'] = data["info"][version_tag]
+            result['license'] = data["info"][license_tag]
             result['dependencies'] = data["info"][dependencies]
         case "javascript":
             data = json.loads(response.text)
+            result['license'] = ""
+            result['dependencies'] = []
             if 'versions' in data.keys():
                 latest = data['dist-tags']['latest']
                 result['name'] = package
                 # data['versions'][latest][name]
                 result['version'] = latest
-                result['license'] = data['versions'][latest]['license']
-                result['dependencies'] = data['versions'][latest]['dependencies']
+                latest_ = data['versions'][latest]
             else:
                 result['name'] = package
-                result['version'] = data[version]
-                result['license'] = data[licence]
-                result['dependencies'] = data[dependencies]
+                result['version'] = data[version_tag]
+                latest_ = data
+            if "license" in latest_.keys():
+                result['license'] = latest_["license"]
+            elif "licenses" in latest_.keys():
+                result['license'] = ";".join(
+                    [
+                        lic["type"] for lic
+                        in latest_["licenses"]
+                    ]
+                )
+            if "dependencies" in latest_.keys():
+                result['dependencies'] = latest_['dependencies']
+            elif "__dependencies" in latest_.keys():
+                result['dependencies'] = latest_['__dependencies']
         case "go":
             if response.status_code != 400:
                 soup = BeautifulSoup(response.text, "html.parser")
@@ -139,10 +158,9 @@ def make_single_request(
                     name_parse[0],
                     class_=name_parse[1]
                 ).getText().strip().split(" ")
+                package_name = package
                 if len(name_data) > 1:
                     package_name = name_data[-1].strip()
-                else:
-                    package_name = package
                 key_parse = source[language]['parse'].split('.')
                 ver_parse = source[language]['versions'].split('.')
                 dep_parse = source[language]['dependencies'].split('.')
@@ -175,17 +193,24 @@ def make_single_request(
                         )
                     ]
                 result['name'] = package_name
-                result['version'] = data[version]
-                result['license'] = data[licence]
+                result['version'] = data[version_tag]
+                result['license'] = data[license_tag]
                 result['dependencies'] = dependencies
             else:
                 result = make_vcs_request(package)
     result["timestamp"] = datetime.utcnow().isoformat()
-    es.index(
-        index=language,
-        id=package,
-        document=result
-    )
+    if version:
+        es.index(
+            index=language,
+            id=package + "@" + version,
+            document=result
+        )
+    else:
+        es.index(
+            index=language,
+            id=package,
+            document=result
+        )
     return result
 
 
@@ -204,34 +229,18 @@ def make_multiple_requests(
     result = {}
 
     for package in packages:
-        result[package] = make_single_request(es, language, package)
+        name_ver = package.split("@")
+        if len(name_ver) == 1:
+            result[package] = make_single_request(es, language, package)
+        else:
+            result[package] = make_single_request(es, language, name_ver[0], name_ver[1])
     return result
 
 
 def main():
     """Main function for testing"""
     es = connect_elasticsearch({'host': 'localhost', 'port': 9200})
-    if es is None:
-        sys.exit(-1)
-    dependency_list = {
-        'javascript':
-            [
-                'react',
-            ],
-        "python":
-            [
-                'pygithub'
-            ],
-        "go":
-            [
-                "https://github.com/deepsourcelabs/cli",
-                "https://github.com/go-yaml/yaml",
-                "github.com/getsentry/sentry-go",
-                "github.com/cactus/go-statsd-client/v5/statsd",
-                "github.com/guseggert/pkggodev-client",
-            ]
-    }
-    for lang, dependencies in dependency_list.items():
+    for lang, dependencies in Constants.DEPENDENCY_TEST.items():
         logging.info(
             json.dumps(
                 make_multiple_requests(es, lang, dependencies),
