@@ -11,7 +11,6 @@ these may not support semantic versioning (https://semver.org/)
             gopkg.in/yaml.v1 - https://github.com/go-yaml/yaml/tree/v1
 
 """
-import sys
 import Constants
 from bs4 import BeautifulSoup
 import re
@@ -23,7 +22,7 @@ from db.ElasticWorker import Elasticsearch, connect_elasticsearch
 from helper import Result
 from vcs.GithubWorker import handle_github
 import logging
-from typing import List, TypedDict, Optional
+from typing import List
 
 requests_cache.install_cache('test_cache', expire_after=Constants.CACHE_EXPIRY)
 source: dict = Constants.REGISTRY

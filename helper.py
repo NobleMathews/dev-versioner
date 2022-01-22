@@ -1,3 +1,7 @@
+"""
+Helper Functions for Inspector
+"""
+
 from typing import TypedDict, List
 
 

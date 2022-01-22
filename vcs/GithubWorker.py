@@ -1,3 +1,7 @@
+"""
+VCS Handler for Github
+"""
+
 import time
 from typing import Dict, List, Any
 from github import Github
@@ -10,7 +14,7 @@ import datetime
 g = Github(Constants.GITHUB_TOKEN)
 
 
-def handle_github(dependency: str) -> dict[str, str | list[Any]]:
+def handle_github(dependency: str) -> Dict[str, str | List[Any]]:
     """VCS fallthrough for GitHub based GO"""
     result = {}
     rl = g.get_rate_limit()

@@ -1,5 +1,8 @@
-import logging
+"""
+Functions to work with ElasticSearch
+"""
 
+import logging
 from elasticsearch import Elasticsearch
 import Secrets
 
@@ -34,5 +37,6 @@ def create_index(es: Elasticsearch, index_name: str = "versioner") -> bool:
 
 
 def clear_index(es: Elasticsearch, index_name: str = "versioner") -> bool:
+    """Delete indexes from Elastic"""
     es.indices.delete(index=index_name, ignore=400)
     return True
