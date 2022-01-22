@@ -22,7 +22,7 @@ from db.ElasticWorker import Elasticsearch, connect_elasticsearch
 from helper import Result
 from vcs.GithubWorker import handle_github
 import logging
-from typing import List, TypedDict
+from typing import List, TypedDict, Optional
 
 requests_cache.install_cache('test_cache', expire_after=Constants.CACHE_EXPIRY)
 source: dict = Constants.REGISTRY
@@ -79,13 +79,15 @@ def make_url(
 def make_single_request(
         es: Elasticsearch,
         language: str,
-        package: str
+        package: str,
+        version: str = ""
 ) -> Result:
     """
     Obtain package license and dependency information.
     :param es: ElasticSearch Instance
     :param language: python, javascript or go
     :param package: as imported
+    :param version: check for specific version
     :return: result object with name version license and dependencies
     """
     ESresult: dict = es.get(index=language, id=package, ignore=404)
@@ -99,7 +101,7 @@ def make_single_request(
             logging.info("Using " + package + " found in ES Database")
             return ESresult["_source"]
     result = {}
-    url = make_url(language, package)
+    url = make_url(language, package, version)
     logging.info(url)
     response = requests.get(url)
     name = source[language]['name']
