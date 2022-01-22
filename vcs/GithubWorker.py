@@ -1,6 +1,4 @@
-"""
-VCS Handler for Github
-"""
+"""VCS Handler for Github"""
 
 import time
 from typing import Dict, List, Any

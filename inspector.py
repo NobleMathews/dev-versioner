@@ -232,7 +232,9 @@ def make_multiple_requests(
         if len(name_ver) == 1:
             result[package] = make_single_request(es, language, package)
         else:
-            result[package] = make_single_request(es, language, name_ver[0], name_ver[1])
+            result[package] = make_single_request(
+                es, language, name_ver[0], name_ver[1]
+            )
     return result
 
 

@@ -1,9 +1,7 @@
-"""
-Tests for all functions in inspector.py
-"""
+"""Tests for all functions in inspector.py"""
 
 import inspector
-from db.ElasticWorker import *
+from db.ElasticWorker import connect_elasticsearch, create_index, clear_index
 import Constants
 
 es = connect_elasticsearch({'host': 'localhost', 'port': 9200})

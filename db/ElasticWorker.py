@@ -1,6 +1,4 @@
-"""
-Functions to work with ElasticSearch
-"""
+"""Functions to work with ElasticSearch"""
 
 import logging
 from elasticsearch import Elasticsearch
