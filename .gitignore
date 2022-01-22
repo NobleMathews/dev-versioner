@@ -1,4 +1,6 @@
 /Constants.py
 **/test_cache.sqlite
 /virtualpy/
-**coverage**
+coverage.py
+.coverage
+Secrets.py
