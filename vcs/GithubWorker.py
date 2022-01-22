@@ -5,6 +5,7 @@ from helper import parse_license
 import logging
 import re
 import Constants
+import datetime
 
 g = Github(Constants.GITHUB_TOKEN)
 
@@ -15,7 +16,11 @@ def handle_github(dependency: str) -> dict[str, str | list[Any]]:
     rl = g.get_rate_limit()
     if rl.core.remaining == 0:
         logging.error("GitHub API limit exhuasted - Sleeping")
-        time.sleep(rl.core.reset-datetime.datetime.now())
+        time.sleep(
+            (
+                    rl.core.reset - datetime.datetime.now()
+            ).total_seconds()
+        )
     repo_identifier = re.search(r"github.com/([^/]+)/([^/.\r\n]+)", dependency)
     repo = g.get_repo(repo_identifier.group(1) + "/" + repo_identifier.group(2))
     repo_license = repo.get_license()
