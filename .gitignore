@@ -1,6 +1,7 @@
-/Constants.py
 **/test_cache.sqlite
 /virtualpy/
-coverage.py
+coverage.xml
 .coverage
 Secrets.py
+/.pytest_cache/
+/configuration.ini

@@ -1,7 +1,7 @@
 """VCS Handler for Github"""
 
 import time
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from github import Github
 from helper import parse_license
 import logging
@@ -9,15 +9,14 @@ import re
 import Constants
 import datetime
 
-g = Github(Constants.GITHUB_TOKEN)
 
-
-def handle_github(dependency: str) -> Dict[str, str | List[Any]]:
+def handle_github(dependency: str, gh_token: Optional[str]) -> Dict[str, str | List[Any]]:
     """VCS fallthrough for GitHub based GO"""
+    g = Github(gh_token)
     result = {}
     rl = g.get_rate_limit()
     if rl.core.remaining == 0:
-        logging.error("GitHub API limit exhuasted - Sleeping")
+        logging.error("GitHub API limit exhausted - Sleeping")
         time.sleep(
             (
                     rl.core.reset - datetime.datetime.now()
@@ -39,7 +38,6 @@ def handle_github(dependency: str) -> Dict[str, str | List[Any]]:
         releases = [tag.name for tag in repo.get_tags()]
     logging.info(releases)
     dep_file = repo.get_contents("go.mod").decoded_content.decode()
-    # require .. .. or require ( .. .. \n .. ..)
     dep_data = re.findall(r"[\s/]+([^\s\n(]+)\s+v([^\s\n]+)", dep_file)
     data = dict(dep_data)
     result['name'] = dependency
