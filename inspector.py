@@ -92,11 +92,9 @@ def make_single_request(
     :param gh_token: GitHub token for authentication
     :return: result object with name version license and dependencies
     """
+    package_version = package
     if es is not None:
-        if version:
-            ESresult: dict = es.get(index=language, id=package + "@" + version, ignore=404)
-        else:
-            ESresult: dict = es.get(index=language, id=package, ignore=404)
+        ESresult: dict = es.get(index=language, id=package_version, ignore=404)
         if ESresult.get("found"):
             db_time = datetime.fromisoformat(
                 ESresult["_source"]["timestamp"],
@@ -126,23 +124,20 @@ def make_single_request(
             handle_npmjs(response, queries, result)
         case "go":
             if response.status_code == 200:
+                """Handle 302: Redirection"""
+                if response.history:
+                    red_url = response.url + "@" + version
+                    response = requests.get(red_url)
                 scrape_go(response, queries, result, url)
             else:
                 result = handle_vcs(package, gh_token)
     result["timestamp"] = datetime.utcnow().isoformat()
     if es is not None:
-        if version:
-            es.index(
-                index=language,
-                id=package + "@" + version,
-                document=result
-            )
-        else:
-            es.index(
-                index=language,
-                id=package,
-                document=result
-            )
+        es.index(
+            index=language,
+            id=package_version,
+            document=result
+        )
     return result
 
 

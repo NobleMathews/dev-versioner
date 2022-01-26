@@ -75,12 +75,12 @@ def handle_npmjs(api_response: requests.Response, queries: dict, result: Result)
 
 def scrape_go(response: requests.Response, queries: dict, result: Result, url: str):
     """
-        Take api response and return required results object
-        :param response: response from requests get
-        :param queries: compiled jmespath queries
-        :param result: object to mutate
-        :param url: go url scraped
-        """
+    Take api response and return required results object
+    :param response: response from requests get
+    :param queries: compiled jmespath queries
+    :param result: object to mutate
+    :param url: go url scraped
+    """
     soup = BeautifulSoup(response.text, "html.parser")
     name_parse = queries['name'].split('.')
     name_data = soup.find(

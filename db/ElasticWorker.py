@@ -38,5 +38,4 @@ def clear_index(es, index_name: str = "versioner") -> bool:
     if es is not None:
         es.indices.delete(index=index_name, ignore=400)
         return True
-    else:
-        return False
+    return False

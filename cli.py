@@ -26,14 +26,13 @@ def main(
     if config is None or not config.is_file():
         logging.error("Configuration file not found")
         raise typer.Abort()
-    else:
-        configfile.read(config)
-        if gh_token is None and configfile.has_option("secrets", "gh_token"):
-            gh_token = configfile.get("secrets", "gh_token").strip()
-        if es_uid is None and configfile.has_option("secrets", "es_uid"):
-            es_uid = configfile.get("secrets", "es_uid").strip()
-        if es_pass is None and configfile.has_option("secrets", "es_pass"):
-            es_pass = configfile.get("secrets", "es_pass").strip()
+    configfile.read(config)
+    if gh_token is None and configfile.has_option("secrets", "gh_token"):
+        gh_token = configfile.get("secrets", "gh_token").strip()
+    if es_uid is None and configfile.has_option("secrets", "es_uid"):
+        es_uid = configfile.get("secrets", "es_uid").strip()
+    if es_pass is None and configfile.has_option("secrets", "es_pass"):
+        es_pass = configfile.get("secrets", "es_pass").strip()
     if es_db:
         es = connect_elasticsearch({'host': host, 'port': port}, (es_uid, es_pass))
     else:
@@ -42,14 +41,17 @@ def main(
         logging.error("dependencies section missing from config file")
         raise typer.Abort()
     for lang, dependencies in configfile["dependencies"].items():
-        logging.info(
-            json.dumps(
-                make_multiple_requests(
-                    es, lang, dependencies.split("\n"), gh_token
-                ),
-                indent=3
+        dep_list = dependencies.split("\n")
+        dep_list = list(filter(None, dep_list))
+        if dep_list:
+            logging.info(
+                json.dumps(
+                    make_multiple_requests(
+                        es, lang, dep_list, gh_token
+                    ),
+                    indent=3
+                )
             )
-        )
 
 
 if __name__ == "__main__":

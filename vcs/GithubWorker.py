@@ -10,7 +10,10 @@ import Constants
 import datetime
 
 
-def handle_github(dependency: str, gh_token: Optional[str]) -> Dict[str, str | List[Any]]:
+def handle_github(
+        dependency: str,
+        gh_token: Optional[str]
+) -> Dict[str, str | List[Any]]:
     """VCS fallthrough for GitHub based GO"""
     g = Github(gh_token)
     result = {}
