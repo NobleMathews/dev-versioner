@@ -1,15 +1,4 @@
-"""
-License Extractor
-
-This script extracts license information from various version control systems
-these may not support semantic versioning (https://semver.org/)
-
-    ! Popular options NPM supports for hosting packages - GitHub  - Gitlab - Bitbucket
-    ! user/repo but still commit hash - branch - version
-        There may exist copies in other repositories
-            gopkg.in/yaml.v1 - https://github.com/go-yaml/yaml/tree/v1
-
-"""
+"""License & Version Extractor"""
 import Constants
 import requests
 import requests_cache
@@ -18,6 +7,7 @@ from helper import Result, handle_pypi, handle_npmjs, scrape_go
 from vcs.GithubWorker import handle_github
 import logging
 from typing import List, Optional
+from error import LanguageNotSupportedError, VCSNotSupportedError
 
 requests_cache.install_cache('test_cache', expire_after=Constants.CACHE_EXPIRY)
 source: dict = Constants.REGISTRY
@@ -25,21 +15,19 @@ source: dict = Constants.REGISTRY
 
 def handle_vcs(
         dependency: str,
-        gh_token: str = None
-) -> Result:
+        result: Result,
+        gh_token: str = None,
+):
     """
     Fall through to VCS check for a go namespace (only due to go.mod check)
     :param gh_token: auth token for vcs requests
     :param dependency: package not found in other repositories
-    :return: result object with name version license and dependencies
+    :param result: object with name version license and dependencies
     """
-    result = {}
     if "github.com" in dependency:
-        result = handle_github(dependency, gh_token)
+        handle_github(dependency, result, gh_token)
     else:
-        logging.error("VCS Request Failed: Unsupported Pattern")
-        logging.info("VCS for BitBucket and GitLab coming soon!")
-    return result
+        raise VCSNotSupportedError(dependency)
 
 
 def make_url(
@@ -49,9 +37,9 @@ def make_url(
 ) -> str:
     """
     Construct the API JSON request URL or web URL to scrape
-    :param language: python, javascript or go
-    :param package: as imported
-    :param version: optional
+    :param language: lowercase: python, javascript or go
+    :param package: as imported in source
+    :param version: optional version specification
     :return: url to fetch
     """
     match language:
@@ -71,8 +59,7 @@ def make_url(
             else:
                 url_elements = (source[language]['url'], package)
         case _:
-            logging.error("This language is not supported")
-            return ""
+            raise(LanguageNotSupportedError(language))
     return "/".join(url_elements).rstrip("/")
 
 
@@ -110,11 +97,12 @@ def make_single_request(
     response = requests.get(url)
     queries = source[language]
 
-    result = {
+    result: Result = {
         'name': package,
         'version': '',
         'license': '',
         'dependencies': [],
+        'timestamp': datetime.utcnow().isoformat()
     }
 
     match language:
@@ -130,8 +118,7 @@ def make_single_request(
                     response = requests.get(red_url)
                 scrape_go(response, queries, result, url)
             else:
-                result = handle_vcs(package, gh_token)
-    result["timestamp"] = datetime.utcnow().isoformat()
+                handle_vcs(package, result, gh_token)
     if es is not None:
         es.index(
             index=language,
