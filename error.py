@@ -8,8 +8,7 @@ class UnsupportedError(Exception):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def __init__(self, key):
-        self.key = key
+    def __init__(self):
         raise NotImplementedError
 
 
