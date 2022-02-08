@@ -5,9 +5,12 @@ import abc
 class UnsupportedError(Exception):
     """Raised when an unsupported action is attempted"""
 
+    __metaclass__ = abc.ABCMeta
+
     @abc.abstractmethod
-    def __init__(self):
-        pass
+    def __init__(self, key):
+        self.key = key
+        raise NotImplementedError
 
 
 class LanguageNotSupportedError(UnsupportedError):
