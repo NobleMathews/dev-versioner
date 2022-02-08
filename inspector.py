@@ -59,7 +59,7 @@ def make_url(
             else:
                 url_elements = (source[language]['url'], package)
         case _:
-            raise(LanguageNotSupportedError(language))
+            raise LanguageNotSupportedError(language)
     return "/".join(url_elements).rstrip("/")
 
 
